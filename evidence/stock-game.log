@@ -1,0 +1,92 @@
+14:31:08.098  gcspy loaded into pid 46057
+14:31:08.105  gcspy hooks installed
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#1)
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#2)
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#3)
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#4)
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#5)
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#6)
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#7)
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#8)
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#9)
+14:31:09.309  CALL -[GCController extendedGamepad] -> object  (#10)
+14:31:09.309  NOTE DidConnect 'Controller' cat=Xbox One extendedGamepad=yes
+14:31:09.309  SET  button handler on 'A Button'  block=0x16fc2ac18
+14:31:09.309  SET  button handler on 'B Button'  block=0x16fc2abf0
+14:31:09.309  SET  button handler on 'X Button'  block=0x16fc2abc8
+14:31:09.309  SET  button handler on 'Y Button'  block=0x16fc2aba0
+14:31:09.309  SET  button handler on 'D-pad (Up)'  block=0x16fc2ab78
+14:31:09.309  SET  button handler on 'D-pad (Down)'  block=0x16fc2ab50
+14:31:09.309  SET  button handler on 'D-pad (Left)'  block=0x16fc2ab28
+14:31:09.309  SET  button handler on 'D-pad (Right)'  block=0x16fc2ab00
+14:31:09.309  SET  button handler on 'Left Bumper'  block=0x16fc2aad8
+14:31:09.309  SET  button handler on 'Right Bumper'  block=0x16fc2aab0
+14:31:09.309  SET  button handler on 'Left Trigger'  block=0x16fc2aa88
+14:31:09.309  SET  button handler on 'Right Trigger'  block=0x16fc2aa60
+14:31:09.309  SET  dpad handler on 'Left Stick'  block=0x16fc2aa38
+14:31:09.309  SET  dpad handler on 'Right Stick'  block=0x16fc2aa10
+14:31:09.309  SET  button handler on 'Left Stick Click'  block=0x16fc2a9e8
+14:31:09.309  SET  button handler on 'Right Stick Click'  block=0x16fc2a9c0
+14:31:09.309  SET  button handler on 'Xbox Button'  block=0x16fc2a998
+14:31:09.309  SET  button handler on 'View Button'  block=0x16fc2a970
+14:31:09.309  SET  button handler on 'Menu Button'  block=0x16fc2a948
+14:31:09.314  NOTE DidConnect 'Xbox Wireless Controller' cat=Xbox One extendedGamepad=yes
+14:31:09.314  SET  button handler on 'A Button'  block=0x16fc2ac18
+14:31:09.314  SET  button handler on 'B Button'  block=0x16fc2abf0
+14:31:09.314  SET  button handler on 'X Button'  block=0x16fc2abc8
+14:31:09.314  SET  button handler on 'Y Button'  block=0x16fc2aba0
+14:31:09.314  SET  button handler on 'D-pad (Up)'  block=0x16fc2ab78
+14:31:09.314  SET  button handler on 'D-pad (Down)'  block=0x16fc2ab50
+14:31:09.314  SET  button handler on 'D-pad (Left)'  block=0x16fc2ab28
+14:31:09.314  SET  button handler on 'D-pad (Right)'  block=0x16fc2ab00
+14:31:09.314  SET  button handler on 'Left Bumper'  block=0x16fc2aad8
+14:31:09.314  SET  button handler on 'Right Bumper'  block=0x16fc2aab0
+14:31:09.314  SET  button handler on 'Left Trigger'  block=0x16fc2aa88
+14:31:09.314  SET  button handler on 'Right Trigger'  block=0x16fc2aa60
+14:31:09.314  SET  dpad handler on 'Left Stick'  block=0x16fc2aa38
+14:31:09.314  SET  dpad handler on 'Right Stick'  block=0x16fc2aa10
+14:31:09.314  SET  button handler on 'Left Stick Click'  block=0x16fc2a9e8
+14:31:09.314  SET  button handler on 'Right Stick Click'  block=0x16fc2a9c0
+14:31:09.314  SET  button handler on 'Xbox Button'  block=0x16fc2a998
+14:31:09.314  SET  button handler on 'View Button'  block=0x16fc2a970
+14:31:09.314  SET  button handler on 'Menu Button'  block=0x16fc2a948
+14:32:05.747  FIRE button 'B Button' value=1.000 pressed=1  (#1)
+14:32:05.749  FIRE button 'B Button' value=0.000 pressed=0  (#2)
+14:32:05.749  FIRE button 'B Button' value=1.000 pressed=1  (#3)
+14:32:05.749  FIRE button 'B Button' value=0.000 pressed=0  (#4)
+14:32:05.749  FIRE button 'B Button' value=1.000 pressed=1  (#5)
+14:32:05.749  FIRE button 'B Button' value=0.000 pressed=0  (#6)
+14:32:05.749  FIRE button 'B Button' value=1.000 pressed=1  (#7)
+14:32:05.750  FIRE button 'B Button' value=0.000 pressed=0  (#8)
+14:32:05.750  FIRE button 'B Button' value=1.000 pressed=1  (#9)
+14:32:05.750  FIRE button 'B Button' value=0.000 pressed=0  (#10)
+14:32:05.750  FIRE button 'B Button' value=1.000 pressed=1  (#11)
+14:32:05.750  FIRE button 'B Button' value=0.000 pressed=0  (#12)
+14:32:05.750  FIRE button 'A Button' value=1.000 pressed=1  (#13)
+14:32:05.750  FIRE button 'A Button' value=0.000 pressed=0  (#14)
+14:32:05.750  FIRE button 'B Button' value=1.000 pressed=1  (#15)
+14:32:05.750  FIRE button 'B Button' value=0.000 pressed=0  (#16)
+14:32:05.750  FIRE button 'X Button' value=1.000 pressed=1  (#17)
+14:32:05.750  FIRE button 'Y Button' value=1.000 pressed=1  (#18)
+14:32:05.750  FIRE button 'X Button' value=0.000 pressed=0  (#19)
+14:32:05.750  FIRE button 'Y Button' value=0.000 pressed=0  (#20)
+14:32:05.750  FIRE button 'B Button' value=1.000 pressed=1  (#21)
+14:32:05.750  FIRE button 'B Button' value=0.000 pressed=0  (#22)
+14:32:05.750  FIRE button 'A Button' value=1.000 pressed=1  (#23)
+14:32:05.750  FIRE button 'A Button' value=0.000 pressed=0  (#24)
+14:32:05.750  FIRE button 'B Button' value=1.000 pressed=1  (#25)
+14:32:05.750  FIRE button 'B Button' value=0.000 pressed=0  (#26)
+14:32:05.750  FIRE button 'B Button' value=1.000 pressed=1  (#27)
+14:32:05.750  FIRE button 'B Button' value=0.000 pressed=0  (#28)
+14:32:05.750  FIRE button 'B Button' value=1.000 pressed=1  (#29)
+14:32:05.750  FIRE button 'B Button' value=0.000 pressed=0  (#30)
+14:32:05.750  FIRE button 'B Button' value=1.000 pressed=1  (#31)
+14:32:05.750  FIRE button 'B Button' value=0.000 pressed=0  (#32)
+14:32:05.750  FIRE button 'A Button' value=1.000 pressed=1  (#33)
+14:32:05.750  FIRE button 'X Button' value=1.000 pressed=1  (#34)
+14:32:05.750  FIRE button 'A Button' value=0.000 pressed=0  (#35)
+14:32:05.750  FIRE button 'A Button' value=1.000 pressed=1  (#36)
+14:32:05.750  FIRE button 'X Button' value=0.000 pressed=0  (#37)
+14:32:05.750  FIRE button 'Y Button' value=1.000 pressed=1  (#38)
+14:32:05.750  FIRE button 'Y Button' value=0.000 pressed=0  (#39)
+14:32:05.750  FIRE button 'A Button' value=0.000 pressed=0  (#40)
