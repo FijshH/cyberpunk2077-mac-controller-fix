@@ -2,7 +2,9 @@
 
 Fork of [SL33PiNg/cyberpunk2077-mac-controller-fix](https://github.com/SL33PiNg/cyberpunk2077-mac-controller-fix)
 for **Apple silicon**. It keeps that fix for Xbox pads, and adds the **8BitDo Ultimate C 2.4G**
-dongle, which macOS never shows as a game controller.
+dongle, which macOS never shows as a game controller. In D-input it also does
+controller vibration: Cyberpunk's left and right haptic channels drive the heavy
+and light rumble motors.
 
 **Symptom:** the game shows the Xbox button glyphs, so it clearly sees your controller, and then
 responds to no button. Keyboard and mouse work fine. On an 8BitDo Ultimate C in the wrong mode,
@@ -47,8 +49,11 @@ The stand-in is announced only after Cyberpunk has created its player slots. Ann
 crashes `assignControllerToPlayers`. That wait matches 2.3.1 build `5314028`. On any other build
 the pad stays hidden rather than crashing the game.
 
-Rumble is not wired up. The game drives separate left and right motors, and this pad can take
-that report, but the stand-in controller does not send it yet.
+Vibration uses the two channels the game already updates while you drive or shoot.
+Left intensity is the heavy motor and right intensity is the light one, each from 0 to 255.
+The duty is the game's own 0–1 haptic intensity, so a light hit stays light and full
+intensity is full strength. The dongle reads that as vendor output `81 11 04 08`.
+This pad has no trigger vibration, and the game does not ask an Xbox pad for it.
 
 ---
 

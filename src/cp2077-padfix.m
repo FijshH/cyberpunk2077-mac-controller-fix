@@ -14,12 +14,118 @@
 #import <IOKit/hid/IOHIDManager.h>
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
+#import <math.h>
 #import <objc/runtime.h>
 #import <pthread.h>
 #import <string.h>
+#import <time.h>
 
 static dispatch_queue_t g_hq;
 static NSString *pf_xbox_category(void);
+
+// The dongle's D-input output report 1 is four LED-page fields. Its USB parser
+// does not drive the motors from that report. Vendor output 0x81 does:
+// 81 11 04 08, then a little-endian duration, then left and right strength
+// 0–255. The receiver stops the motors when that duration runs out, so a held
+// level has to be written again before then. This pad has no trigger motors.
+static IOHIDDeviceRef g_hid;
+static pthread_mutex_t g_rumble_mu = PTHREAD_MUTEX_INITIALIZER;
+static uint8_t g_sent_left, g_sent_right;
+static uint64_t g_sent_at;
+static BOOL g_rumble_sent;
+static BOOL g_rumble_failed;
+
+// The game's intensity is already 0..1: a light hit sits near the bottom and a
+// heavy one is 1. Raising the low end would pull those together into one buzz,
+// so the duty is the intensity itself. 0.2 lands near 47/255 and 1 lands at 255.
+// Anything at or under 0.02, including NaN, is silence.
+static uint8_t pf_level(float intensity) {
+    if (!(intensity > 0.02f)) return 0;
+    if (intensity > 1.f) intensity = 1.f;
+    float x = (intensity - 0.02f) / 0.98f;
+    int v = (int)lrintf(x * 255.f);
+    if (v < 0) v = 0;
+    if (v > 255) v = 255;
+    return (uint8_t)v;
+}
+
+static void pf_send_motors(uint8_t left, uint8_t right) {
+    pthread_mutex_lock(&g_rumble_mu);
+    IOHIDDeviceRef dev = g_hid;
+    uint64_t now = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+    BOOL same = g_rumble_sent && g_sent_left == left && g_sent_right == right;
+    // 200ms on the wire. Refresh a held level inside that window; a zero sticks.
+    if (!dev || (same && (left == 0 || now - g_sent_at < 80000000ull))) {
+        pthread_mutex_unlock(&g_rumble_mu);
+        return;
+    }
+    CFRetain(dev);
+    uint8_t report[64] = { 0x81, 0x11, 0x04, 0x08, 0, 0, left, right };
+    if (left || right) {
+        report[4] = 200;
+        report[5] = 0;
+    }
+    IOReturn r = IOHIDDeviceSetReport(dev, kIOHIDReportTypeOutput, 0x81, report, sizeof(report));
+    CFRelease(dev);
+    if (r == kIOReturnSuccess) {
+        g_sent_left = left;
+        g_sent_right = right;
+        g_sent_at = now;
+        g_rumble_sent = YES;
+    } else if (!g_rumble_failed) {
+        g_rumble_failed = YES;
+        fprintf(stderr, "cp2077-padfix: motor report failed (%08x)\n", r);
+    }
+    pthread_mutex_unlock(&g_rumble_mu);
+}
+
+static void pf_motors(float left, float right) {
+    pf_send_motors(pf_level(left), pf_level(right));
+}
+
+// The game stores a left intensity and a right intensity and passes both here.
+// The method body then drives both of its haptic players from the left value
+// alone. The arguments are the two channels, so the motors are updated from
+// those before the original body runs.
+static IMP g_origIntensity;
+static void pf_intensity(id self, SEL _cmd, float left, float right) {
+    pf_motors(left, right);
+    ((void (*)(id, SEL, float, float))g_origIntensity)(self, _cmd, left, right);
+}
+
+static BOOL g_rumble_hooked;
+static int g_rumble_tries;
+static BOOL pf_hook_rumble(void);
+static void pf_arm_rumble(void) {
+    if (pf_hook_rumble()) return;
+    if (++g_rumble_tries > 40) {
+        fprintf(stderr, "cp2077-padfix: rumble method not found\n");
+        return;
+    }
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        pf_arm_rumble();
+    });
+}
+
+static BOOL pf_hook_rumble(void) {
+    if (g_rumble_hooked) return YES;
+    Class cls = objc_getClass("ControllerObserver");
+    if (!cls) return NO;
+    Method m = class_getInstanceMethod(cls, @selector(triggerHapticsOnControllerIntensitys:intensityR:));
+    if (!m) return NO;
+    const char *enc = method_getTypeEncoding(m);
+    if (!enc || strcmp(enc, "v24@0:8f16f20") != 0) {
+        fprintf(stderr, "cp2077-padfix: rumble method encoding is %s\n", enc ? enc : "missing");
+        g_rumble_hooked = YES;
+        return YES;
+    }
+    g_origIntensity = method_getImplementation(m);
+    method_setImplementation(m, (IMP)pf_intensity);
+    g_rumble_hooked = YES;
+    fprintf(stderr, "cp2077-padfix: left and right rumble wired to the 8BitDo motors\n");
+    return YES;
+}
 
 #pragma mark - stand-in controller
 
@@ -85,13 +191,71 @@ static NSString *pf_xbox_category(void);
 - (GCControllerDirectionPad *)rightThumbstick { return _rights; }
 @end
 
+// Without an engine the game takes this pad back out of its haptic list and
+// never delivers left/right intensities. These objects exist so that list keeps
+// the pad. The speeds themselves are sent from the intensity arguments.
+@interface PFHapticBox : NSObject
+@end
+@implementation PFHapticBox
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)sel {
+    NSMethodSignature *s = [super methodSignatureForSelector:sel];
+    return s ?: [NSMethodSignature signatureWithObjCTypes:"v@:"];
+}
+- (void)forwardInvocation:(NSInvocation *)inv {
+    NSUInteger n = [[inv methodSignature] methodReturnLength];
+    if (n && n <= sizeof(long double)) {
+        unsigned char buf[sizeof(long double)] = {0};
+        [inv setReturnValue:buf];
+    }
+}
+- (BOOL)startAndReturnError:(NSError **)error {
+    if (error) *error = nil;
+    return YES;
+}
+- (void)setStoppedHandler:(void (^)(NSError *))handler { (void)handler; }
+- (id)createPlayerWithPattern:(id)pattern error:(NSError **)error {
+    (void)pattern;
+    if (error) *error = nil;
+    return [PFHapticBox new];
+}
+- (void)stopWithCompletionHandler:(void (^)(NSError *))handler {
+    if (handler) handler(nil);
+}
+- (BOOL)sendParameters:(id)parameters atTime:(NSTimeInterval)time error:(NSError **)error {
+    (void)parameters; (void)time;
+    if (error) *error = nil;
+    return YES;
+}
+- (BOOL)startAtTime:(NSTimeInterval)time error:(NSError **)error {
+    (void)time;
+    if (error) *error = nil;
+    return YES;
+}
+- (BOOL)stopAtTime:(NSTimeInterval)time error:(NSError **)error {
+    (void)time;
+    if (error) *error = nil;
+    return YES;
+}
+@end
+
+@interface PFHaptics : NSObject
+@end
+@implementation PFHaptics
+- (id)createEngineWithLocality:(id)locality {
+    (void)locality;
+    return [PFHapticBox new];
+}
+@end
+
 @interface PFController : GCController
 @property (nonatomic, strong) PFExt *ext;
+@property (nonatomic, strong) PFHaptics *hapticBox;
 @end
 @implementation PFController
 - (GCExtendedGamepad *)extendedGamepad { return _ext; }
 - (NSString *)vendorName { return @"8BitDo"; }
 - (NSString *)productCategory { return pf_xbox_category(); }
+- (id)haptics { return _hapticBox; }
 @end
 
 static PFController *g_pad;
@@ -137,6 +301,7 @@ static PFController *pf_make(void) {
     e.lefts = pf_pad(c);
     e.rights = pf_pad(c);
     c.ext = e;
+    c.hapticBox = [PFHaptics new];
     c.handlerQueue = g_hq;
     return c;
 }
@@ -360,8 +525,29 @@ static void pf_value(void *ctx, IOReturn result, void *sender, IOHIDValueRef val
     });
 }
 
+static void pf_take_pad(IOHIDDeviceRef dev) {
+    int32_t pid = 0;
+    CFNumberRef n = IOHIDDeviceGetProperty(dev, CFSTR(kIOHIDProductIDKey));
+    if (n) CFNumberGetValue(n, kCFNumberSInt32Type, &pid);
+    if (pid != 0x3016) return;
+    IOHIDDeviceOpen(dev, kIOHIDOptionsTypeNone);
+    pthread_mutex_lock(&g_rumble_mu);
+    IOHIDDeviceRef old = g_hid;
+    g_hid = (IOHIDDeviceRef)CFRetain(dev);
+    g_rumble_sent = NO;
+    pthread_mutex_unlock(&g_rumble_mu);
+    if (old) CFRelease(old);
+    // Stop the motors once the device is ours. SetReport waits on the device,
+    // so it stays off the HID run loop.
+    dispatch_async(g_hq, ^{
+        pf_send_motors(0, 0);
+    });
+    fprintf(stderr, "cp2077-padfix: 8BitDo motor report open\n");
+}
+
 static void pf_matched(void *ctx, IOReturn result, void *sender, IOHIDDeviceRef dev) {
     (void)ctx; (void)result; (void)sender;
+    pf_take_pad(dev);
     pf_publish();
     NSArray *els = CFBridgingRelease(IOHIDDeviceCopyMatchingElements(dev, NULL, kIOHIDOptionsTypeNone));
     for (id obj in els) {
@@ -467,6 +653,7 @@ static void padfix_init(void) {
     pf_swizzle();
     for (GCController *c in [GCController controllers]) c.handlerQueue = g_hq;
     pf_arm_deliver();
+    pf_arm_rumble();
 
     pthread_t thread;
     pthread_create(&thread, NULL, pf_hid_thread, NULL);
