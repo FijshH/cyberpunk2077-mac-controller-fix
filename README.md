@@ -1,22 +1,54 @@
 # Cyberpunk 2077 on macOS — controller fix
 
-**Symptom:** the game shows the Xbox button glyphs, so it clearly sees your controller, and then
-responds to no button. Keyboard and mouse work fine.
+Fork of [SL33PiNg/cyberpunk2077-mac-controller-fix](https://github.com/SL33PiNg/cyberpunk2077-mac-controller-fix)
+for **Apple silicon**. It keeps that fix for Xbox pads, and adds the **8BitDo Ultimate C 2.4G**
+dongle, which macOS never shows as a game controller.
 
-**Cause:** the input is not lost. Every press is queued on a dispatch queue the engine stops
-draining the moment it enters its render loop, and all of it runs at once when you quit.
+**Symptom:** the game shows the Xbox button glyphs, so it clearly sees your controller, and then
+responds to no button. Keyboard and mouse work fine. On an 8BitDo Ultimate C in the wrong mode,
+the game does not see the pad at all.
+
+**Cause:** for a pad macOS already exposes, the input is not lost. Every press is queued on a
+dispatch queue the engine stops draining the moment it enters its render loop, and all of it runs
+at once when you quit. An 8BitDo Ultimate C never gets that far: macOS does not expose it as a
+game controller, so the game has nothing to listen to.
 
 **Fix:** twenty lines. It points `GCController.handlerQueue` at a queue that actually runs. It
 changes no file in the game and does not touch your saves.
 
 ```sh
-git clone https://github.com/SL33PiNg/cyberpunk2077-mac-controller-fix
+git clone https://github.com/FijshH/cyberpunk2077-mac-controller-fix
 cd cyberpunk2077-mac-controller-fix
 ./build.sh
 cp2077
 ```
 
 Requires Xcode Command Line Tools (`xcode-select --install`). Apple silicon.
+
+## 8BitDo Ultimate C 2.4G
+
+This is the USB dongle, vendor `0x2DC8`, not the Bluetooth Ultimate 2C. macOS has no Game
+Controller profile for it, so System Settings never shows a Game Controllers row and Cyberpunk
+never receives a `GCController`. The original fix cannot help a pad the system does not announce.
+
+Switch the dongle to **D-input** and leave it there. The mode is saved.
+
+| Mode | How | Product | What macOS does |
+|---|---|---|---|
+| XInput | hold X + Home | `0x3106` | No HID driver. The game cannot see it. |
+| D-input | hold B + Home | `0x3016` | A normal HID gamepad. This fork can read it. |
+
+In D-input the library reads the pad with `IOHIDManager` and, inside the game process only,
+presents a stand-in Xbox One controller. Resting state: hat usage `0x39` is `15` (neutral, not
+up), sticks sit at `127`, triggers at `0`. Face buttons follow the usual 8BitDo D-input map
+(1=A, 2=B, 4=X, 5=Y).
+
+The stand-in is announced only after Cyberpunk has created its player slots. Announcing earlier
+crashes `assignControllerToPlayers`. That wait matches 2.3.1 build `5314028`. On any other build
+the pad stays hidden rather than crashing the game.
+
+Rumble is not wired up. The game drives separate left and right motors, and this pad can take
+that report, but the stand-in controller does not send it yet.
 
 ---
 
@@ -84,7 +116,8 @@ static void padfix_init(void) {
 }
 ```
 
-Full source: [`src/cp2077-padfix.m`](src/cp2077-padfix.m).
+Full source: [`src/cp2077-padfix.m`](src/cp2077-padfix.m). The same file is where the 8BitDo D-input
+bridge lives.
 
 It loads through `DYLD_INSERT_LIBRARIES`, which works because the game ships with
 `com.apple.security.cs.allow-dyld-environment-variables` and
@@ -99,11 +132,14 @@ cp2077          # play
 cp2077 --hud    # also enable Apple's Metal Performance HUD (FPS, frame time, GPU)
 ```
 
-To get the fix on **every** way you start the game, including the Steam library button, set this
-in Steam → right-click Cyberpunk 2077 → Properties → General → Launch Options:
+Steam on macOS treats the first Launch Options token as the program to run.
+`DYLD_INSERT_LIBRARIES=... %command%` fails with OS Error 260, because that token is not a file.
+Put the launcher that `build.sh` just installed in front of `%command%`. In Steam, right-click
+Cyberpunk 2077 → Properties → General → Launch Options, and paste the path `./build.sh` printed.
+It looks like this:
 
 ```
-DYLD_INSERT_LIBRARIES=$HOME/.local/lib/cp2077-padfix.dylib %command%
+/Users/you/.local/bin/cp2077 %command%
 ```
 
 Launching through Steam keeps playtime tracking, achievements, and Cloud saves working normally.
@@ -141,7 +177,8 @@ Every one of these is a fix circulating for this symptom. Each was rejected by a
 ## Tested on
 
 macOS 26.6.2 (25G83), Apple silicon · Cyberpunk 2077 Ultimate 2.3.1 build 5314028, native arm64,
-Steam appid 1091500 · Xbox Wireless Controller model 1914, over both Bluetooth LE and USB.
+Steam appid 1091500 · Xbox Wireless Controller model 1914, over both Bluetooth LE and USB ·
+8BitDo Ultimate C 2.4G dongle (`0x2DC8` / `0x3016`) in D-input.
 
 ## Upstream
 
@@ -152,4 +189,6 @@ second machine is worth more than a good report.
 
 ## Licence
 
-MIT. This is an independent fix. It is not affiliated with or endorsed by CD PROJEKT RED or Apple.
+MIT. This is an independent fix, forked from
+[SL33PiNg/cyberpunk2077-mac-controller-fix](https://github.com/SL33PiNg/cyberpunk2077-mac-controller-fix).
+It is not affiliated with or endorsed by CD PROJEKT RED, 8BitDo, or Apple.
